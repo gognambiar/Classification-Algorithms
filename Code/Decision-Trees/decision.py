@@ -7,7 +7,9 @@ import getopt
 import copy
 import argparse
 import simplejson
-
+import copy
+# from sklearn.model_selection import cross_val_score
+# from sklearn.tree import DecisionTreeClassifier
 
 def loadData(filePath):
     # function to load data from file
@@ -154,24 +156,50 @@ class DecisionTree(object):
         return labels
         
 
+def KFoldCrossValidation(classifier, data, labels, k=1):
+    data = np.hstack((data,labels.reshape(-1,1)))
+
+    np.random.shuffle(data)
+
+    chunks = np.array_split(data, k)
+
+    predicted = np.zeros((len(chunks),1))
+
+    for i in xrange(k):
+        temp = copy.copy(chunks)
+        test = temp[i]
+        del temp[i]
+        train = np.vstack(temp)
+        # print train.shape,test.shape
+        classifier.fit(train[:,:-1],train[:,-1])
+        pred = classifier.predict(test[:,:-1])
+        predicted[i] = np.sum(pred == test[:,-1])/ float(pred.shape[0])
+        # print predicted[i]
+
+    return np.mean(predicted)
+
+
 def main(argv):
     # arguments
     parser = argparse.ArgumentParser(description='Hierarchial Agglomerative Clustering')
 
     # optional arguments
+    parser.add_argument('-d', '--maxDepth', help='Maximum Depth of Decision Tree', type=int, default=10)
+    parser.add_argument('-r', '--minRows', help='Minimum Rows required to split', type=int, default=1)
     # parser.add_argument('-o', '--output', help='Output file to store PCA visualization')
 
     # required arguments
     requiredNamed = parser.add_argument_group('Required named arguments')
     requiredNamed.add_argument('-i', '--input', help='Input data file name', required=True, type=str)
-    requiredNamed.add_argument('-d', '--maxDepth', help='Maximum Depth of Decision Tree', required=True, type=int)
-    requiredNamed.add_argument('-r', '--minRows', help='Minimum Rows required to split', required=True, type=int)
+    
     args = parser.parse_args()
     
     # parse arguments
     inputFile = args.input
     maxDepth = args.maxDepth
     minRows = args.minRows
+
+    # print maxDepth,minRows
 
 
     # load initial data
@@ -184,8 +212,12 @@ def main(argv):
     tree = DecisionTree(maxDepth,minRows)
     tree.fit(data,labels)
     predicted =  tree.predict(data)
-    print np.sum(predicted == labels)/ float(labels.shape[0])
-    exit(0)
+    # print np.sum(predicted == labels)/ float(labels.shape[0])
+    # exit(0)
+    print KFoldCrossValidation(tree,data,labels,k=10)
+
+    # clf = DecisionTreeClassifier(max_depth=maxDepth)
+    # print np.mean(cross_val_score(clf, data, labels, cv=10))
 
 
 
