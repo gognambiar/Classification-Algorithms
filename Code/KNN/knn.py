@@ -45,7 +45,7 @@ def calc_knn(train_data,test_data,train_labels,test_labels,k):
     for i in range(test_labels.shape[0]):
         unique,counts = np.unique(train_labels[ind[i]],return_counts=True)
         grp = list(zip(counts,unique))
-        #Handling cases where k is even and the neighbors have conflicting labels. k is reduced untill a clear winner is found out
+        #Handling cases where k is even and the neighbors have conflicting labels. k is reduced until a clear winner is found out
         if(k % 2 == 0 and grp[0][0] == k/2):
             unique,counts = np.unique(train_labels[ind[i,:-1]],return_counts=True)
             grp = list(zip(counts,unique))
