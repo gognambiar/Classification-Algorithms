@@ -19,13 +19,20 @@ def loadData(filePath):
         return None
 
     # load data from the file
-    df = DataFrame.from_csv(filePath, sep='\s+', header=None, index_col=False)
+    df = DataFrame.from_csv(filePath, sep='\s+', header=None, index_col=None)
+    # print df
     # print df
 
     obj_cols = df.select_dtypes(include=['object']).columns.values.tolist()
+    # print obj_cols
+    # print df.dtypes
+    # print df[0]
+    # exit(0)
 
     for col in obj_cols:
+        # print df[col].cat_column.dtype == 'category'
         df[col] = df[col].astype('category')
+    # exit(0)
 
     obj_cols = df.select_dtypes(['category']).columns
 
@@ -43,9 +50,10 @@ def loadData(filePath):
 
 class DecisionTree(object):
 
-    def __init__(self, maxDepth=1, minRows=1):
+    def __init__(self, maxDepth=1, minRows=1, numFeatures=1.0):
         self.maxDepth = maxDepth
         self.minRows = minRows
+        self.numFeatures = numFeatures
         self.root = None
 
     def fit(self, data, labels):
@@ -75,8 +83,10 @@ class DecisionTree(object):
         selGiniRight = None
 
 
-
-        for index in xrange(data.shape[1] - 1):
+        randomFeatureIndices = np.random.choice(xrange(data.shape[1]-1), int(np.ceil((data.shape[1]-1)*self.numFeatures)), replace=False)
+        # print randomFeatureIndices
+        # exit(0)
+        for index in randomFeatureIndices:
             values = set(data[:,index].reshape(1,-1).tolist()[0])
             for value in values:
                 # print index,value,values
@@ -159,7 +169,7 @@ class DecisionTree(object):
 def KFoldCrossValidation(classifier, data, labels, k=1):
     data = np.hstack((data,labels.reshape(-1,1)))
 
-    np.random.shuffle(data)
+    # np.random.shuffle(data)
 
     chunks = np.array_split(data, k)
 
@@ -181,7 +191,7 @@ def KFoldCrossValidation(classifier, data, labels, k=1):
 
 def main(argv):
     # arguments
-    parser = argparse.ArgumentParser(description='Hierarchial Agglomerative Clustering')
+    parser = argparse.ArgumentParser(description='Decision Tree Classifier')
 
     # optional arguments
     parser.add_argument('-d', '--maxDepth', help='Maximum Depth of Decision Tree', type=int, default=10)
@@ -209,7 +219,7 @@ def main(argv):
     # print data.shape
     # print labels.shape
 
-    tree = DecisionTree(maxDepth,minRows)
+    tree = DecisionTree(maxDepth,minRows,numFeatures=1)
     tree.fit(data,labels)
     predicted =  tree.predict(data)
     # print np.sum(predicted == labels)/ float(labels.shape[0])
