@@ -20,6 +20,8 @@ def loadData(filePath):
 
     # load data from the file
     df = DataFrame.from_csv(filePath, sep='\s+', header=None, index_col=None)
+    # print df
+    # print df
 
     obj_cols = df.select_dtypes(include=['object']).columns.values.tolist()
     # print obj_cols
@@ -103,7 +105,7 @@ class DecisionTree(object):
 
                 # print infoGain,gini,giniLeft,left.shape[0],giniRight,right.shape[0]
 
-                if gain is None or infoGain > gain:
+                if gain is None or infoGain > gain and left is not None and right is not None:
                     selIndex = index
                     selValue = value
                     gain = infoGain
@@ -121,6 +123,7 @@ class DecisionTree(object):
     def createTree(self, data, depth=0):
         # print data.shape,depth,self.minRows,self.maxDepth
         gini = self.getGini(data,set(data[:,-1].reshape(1,-1).tolist()[0]))
+        # print gini
         root = {'data':data.tolist(), 'gini':gini, 'dataCount': data.shape[0]}
         if gini == 0 or data.shape[0] < self.minRows or depth >= self.maxDepth:
             root['type'] = 'terminal'
@@ -138,12 +141,22 @@ class DecisionTree(object):
         else:
             root['type'] = 'split'
             index, value, gain, left, right = self.getSplit(data, gini)
-            root['index'] = index
-            root['value'] = value
-            root['left'] = self.createTree(left,depth+1)
-            root['right'] = self.createTree(right,depth+1)
-            root['gain'] = gain
-            del root['data']
+            if left is not None and right is not None:
+                root['index'] = index
+                root['value'] = value
+                root['left'] = self.createTree(left,depth+1)
+                root['right'] = self.createTree(right,depth+1)
+                root['gain'] = gain
+                del root['data']
+            else:
+                root['type'] = 'terminal'
+                # print data.shape
+                unique, counts = np.unique(data[:,-1], return_counts=True)
+                # print unique,counts
+                count = zip(unique, counts)
+                count = sorted(count, key = lambda x: x[1], reverse=True)
+                # print count
+                root['label'] = count[0][0]
         return root
         # if gini = 
 
