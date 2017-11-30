@@ -19,7 +19,7 @@ def loadData(filePath):
         return None
 
     # load data from the file
-    df = DataFrame.from_csv(filePath, sep='\s+', header=None, index_col=False)
+    df = DataFrame.from_csv(filePath, sep='\s+', header=None, index_col=None)
     # print df
 
     obj_cols = df.select_dtypes(include=['object']).columns.values.tolist()
