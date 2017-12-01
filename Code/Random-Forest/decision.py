@@ -1,5 +1,6 @@
 import numpy as np
 from pandas import DataFrame
+import pandas as pd
 # from sklearn.metrics.pairwise import euclidean_distances
 import os
 import sys
@@ -18,10 +19,10 @@ def loadData(filePath):
     if not os.path.exists(filePath):
         return None
 
+    mappings = {}
+
     # load data from the file
     df = DataFrame.from_csv(filePath, sep='\s+', header=None, index_col=None)
-    # print df
-    # print df
 
     obj_cols = df.select_dtypes(include=['object']).columns.values.tolist()
     # print obj_cols
@@ -31,7 +32,13 @@ def loadData(filePath):
 
     for col in obj_cols:
         # print df[col].cat_column.dtype == 'category'
-        df[col] = df[col].astype('category')
+        # df[col] = df[col].astype('category')
+        # df[col] = pd.Categorical(df[col])
+        # print pd.factorize(df[col])[1]
+        coded, index = pd.factorize(df[col])
+        index = index.tolist()
+        df[col] = coded
+        mappings[col] = index
     # exit(0)
 
     obj_cols = df.select_dtypes(['category']).columns
@@ -45,7 +52,11 @@ def loadData(filePath):
     labels = data[:,-1]
     data = data[:,:-1]
 
-    return (data,labels)
+    print mappings
+
+    # exit(0)
+
+    return (data,labels, mappings)
 
 
 class DecisionTree(object):
@@ -64,6 +75,7 @@ class DecisionTree(object):
         self.root = self.createTree(self.data)
 
         # print simplejson.dumps(self.root)
+        # exit(0)
 
     def getGini(self, data, classes):
         gini = 1
@@ -93,10 +105,14 @@ class DecisionTree(object):
                 left = data[data[:, index] < value]
                 right = data[data[:, index] >= value]
                 
-                if left.shape[0] == 0 or right.shape[0] == 0:
-                    continue
-                giniLeft = self.getGini(left, set(left[:,-1].reshape(1,-1).tolist()[0]))
-                giniRight = self.getGini(right, set(right[:,-1].reshape(1,-1).tolist()[0]))
+                if left.shape[0] == 0:
+                    giniLeft = 0
+                else:
+                    giniLeft = self.getGini(left, set(left[:,-1].reshape(1,-1).tolist()[0]))
+                if right.shape[0] == 0:
+                    giniRight = 0
+                else:
+                    giniRight = self.getGini(right, set(right[:,-1].reshape(1,-1).tolist()[0]))
 
                 # print left.shape,giniLeft
                 # print right.shape, giniRight
@@ -105,7 +121,7 @@ class DecisionTree(object):
 
                 # print infoGain,gini,giniLeft,left.shape[0],giniRight,right.shape[0]
 
-                if gain is None or infoGain > gain and left is not None and right is not None:
+                if gain is None or infoGain > gain:
                     selIndex = index
                     selValue = value
                     gain = infoGain
@@ -123,7 +139,6 @@ class DecisionTree(object):
     def createTree(self, data, depth=0):
         # print data.shape,depth,self.minRows,self.maxDepth
         gini = self.getGini(data,set(data[:,-1].reshape(1,-1).tolist()[0]))
-        # print gini
         root = {'data':data.tolist(), 'gini':gini, 'dataCount': data.shape[0]}
         if gini == 0 or data.shape[0] < self.minRows or depth >= self.maxDepth:
             root['type'] = 'terminal'
@@ -141,7 +156,7 @@ class DecisionTree(object):
         else:
             root['type'] = 'split'
             index, value, gain, left, right = self.getSplit(data, gini)
-            if left is not None and right is not None:
+            if left is not None and right is not None and left.shape[0] != 0 and right.shape[0] != 0:
                 root['index'] = index
                 root['value'] = value
                 root['left'] = self.createTree(left,depth+1)
@@ -195,7 +210,7 @@ def KFoldCrossValidation(classifier, data, labels, k=1):
         classifier.fit(train[:,:-1],train[:,-1])
         pred = classifier.predict(test[:,:-1])
         predicted[i] = np.sum(pred == test[:,-1])/ float(pred.shape[0])
-        # print predicted[i]
+        print predicted[i]
 
     return np.mean(predicted)
 
