@@ -57,7 +57,7 @@ def calc_naive_bayes(train_data,test_data,test_labels,obj_cols,print_opt):
 	data_no = np.asarray([train_data[i] for i in range(len(train_data)) if train_data[i][-1] == 0])[:,:-1]
 	data_yes = pd.DataFrame(data_yes)
 	data_no = pd.DataFrame(data_no)
-	gaus_yes,gaus_no = [],[]
+	gaus_yes,gaus_no,gaus_full = [],[],[]
 	dct_yes,dct_no,dct_pri = {},{},{}
 	full_data = pd.DataFrame(train_data)
 	
@@ -94,6 +94,11 @@ def calc_naive_bayes(train_data,test_data,test_labels,obj_cols,print_opt):
 			gaus_no.append((data_no[i].mean(axis = 0),data_no[i].var(axis = 0)))
 		else:
 			gaus_no.append((0,0))
+	for i in range(full_data.shape[1]):
+		if(i not in obj_cols):
+			gaus_full.append((full_data[i].mean(axis = 0),full_data[i].var(axis=0)))
+		else:
+			gaus_full.append((0,0))
 
 	res = np.zeros(test_data.shape[0])
 	for i in range(test_data.shape[0]):
@@ -104,8 +109,9 @@ def calc_naive_bayes(train_data,test_data,test_labels,obj_cols,print_opt):
 				prob_yes *= categ_prob(test_data[i][j],j,dct_yes)/prob_class
 				prob_no *= categ_prob(test_data[i][j],j,dct_no)/prob_class
 			else:
-				prob_yes *= gaussian_prob(gaus_yes[j][0],gaus_yes[j][1],test_data[i][j])
-				prob_no *= gaussian_prob(gaus_no[j][0],gaus_no[j][1],test_data[i][j])
+				prob_class = gaussian_prob(gaus_full[j][0],gaus_full[j][1],test_data[i][j])
+				prob_yes *= gaussian_prob(gaus_yes[j][0],gaus_yes[j][1],test_data[i][j])/prob_class
+				prob_no *= gaussian_prob(gaus_no[j][0],gaus_no[j][1],test_data[i][j])/prob_class
 		
 
 		fin_prob_yes = prob_yes*(data_yes.shape[0]/(data_yes.shape[0]+data_no.shape[0]))
