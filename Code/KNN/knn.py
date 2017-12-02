@@ -40,7 +40,6 @@ def loadData(filePath):
 		mappings[col] = index
 
 	data = df.values
-	print(df)
 
 	return (data[:,:-1],data[:,-1],obj_cols)
 
