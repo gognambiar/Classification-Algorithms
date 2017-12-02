@@ -6,7 +6,7 @@ from pandas import factorize
 import argparse
 from sklearn import preprocessing
 
-
+#Calculate euclidean distance, handles both categorical and continuous data
 def euclidean_dist(a,b,obj_cols):
 	dist = 0
 	for i in range(a.shape[0]):
@@ -18,7 +18,7 @@ def euclidean_dist(a,b,obj_cols):
 	
 	return dist**(1/2)
 
-
+#Load data from file name provided
 def loadData(filePath):
 	# function to load data from file
 
@@ -30,7 +30,7 @@ def loadData(filePath):
 
 	# load data from the file
 	df = DataFrame.from_csv(filePath, sep='\s+', header=None, index_col=None)
-
+	#Record columns which have categorical data
 	obj_cols = df.select_dtypes(include=['object']).columns.values.tolist()
 
 	for col in obj_cols:
@@ -100,7 +100,7 @@ def main():
 
 
 	args = parser.parse_args()
-
+	#Handle the condition where both train and test data set are given seperately
 	if(args.tra and args.tes):
 		if(args.num):
 			train_data, train_labels,obj_cols = loadData(args.tra)
@@ -120,7 +120,7 @@ def main():
 
 
 	
-	#If k is provided by the user
+	#If k is provided by the user and a single dataset is given
 	elif(args.num):
 		file_name = args.input
 		k = args.num
@@ -152,7 +152,7 @@ def main():
 		file_name = args.input
 		print("k value not provided in input and hence running for optimum k")
 		opt_accuracy = 0
-		for k in range(2,10):
+		for k in range(1,10):
 			sum_accuracy,sum_precision,sum_recall,sum_fmeasure = np.zeros(4)
 			#Loading data from input file
 			data,labels,obj_cols = loadData(file_name)
