@@ -9,77 +9,148 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import cross_val_score
 
 class BoostedClassifier(object):
-    def __init__(self, classifier, numIters=50, ratio=0.632):
+    def __init__(self, classifier, numClassifiers=10, numIters=100, ratio=0.632, learning_rate=1.0):
         self.classifier = classifier
+        self.numClassifiers = numClassifiers
         self.numIters = numIters
         self.ratio = ratio
+        self.importance = [0]*numIters
+        self.classifiers = [None]*numIters
+        self.learning_rate = learning_rate
+        self.counter = 0
 
     def createSubsets(self, data, weights):
         length = data.shape[0]
         ratio = self.ratio
 
+        dataSets = [None]*self.numClassifiers
+
         originalDataLength = int(length*ratio)
+        # print weights.reshape(1,-1).tolist()
+        # print length
 
-        randomIndices = np.random.choice(length, originalDataLength, weights, replace=False)
-        dataSets[i] = data[randomIndices]
-        randomDuplicating = np.random.choice(dataSets[i].shape[0], length - originalDataLength, replace=True)
-        dups = dataSets[i][randomDuplicating]
-        dataSet = np.vstack((dataSets[i], dups))
+        for i in xrange(self.numClassifiers):
+            randomIndices = np.random.choice(length, originalDataLength, p=weights.reshape(1,-1).tolist()[0], replace=False)
+            dataSets[i] = data[randomIndices]
+            randomDuplicating = np.random.choice(dataSets[i].shape[0], length - originalDataLength, replace=True)
+            # print dataSets[i].shape
+            dups = dataSets[i][randomDuplicating]
+            # print dups.shape
+            dataSets[i] = np.vstack((dataSets[i], dups))
+            # print dataSets[i].shape[0]
 
-        return dataSet
+
+        return dataSets
 
     def fit(self, data, labels):
+        # self.data = data
+        # self.labels = labels
         self.data = np.hstack((data,labels.reshape(-1,1)))
         numIters = self.numIters
-        classifier = self.classifier
+        learning_rate = self.learning_rate
+        # print self.data.shape
+        # self.dataSets = self.createSubsets(self.data)
+        # print len(self.dataSets)
 
-        weights = np.array([1/float(data.shape[0])]*data.shape[0]).reshape(-1,1)
-        tempClassifier = copy(classifier)
+        # print [i.shape for i in self.dataSets]
+
+        weights = np.ones((data.shape[0],1)) / data.shape[0]
+        # print np.sum(weights)
 
         for i in xrange(numIters):
+            classifier,error,importance,missed = self.getBestClassifier(weights)
+            if error > 0.5:
+                self.importance = [0]*self.numClassifiers
+                self.classifiers = [None]*self.numClassifiers
+                self.counter = 0
+            else:
+                self.importance[i] = importance
+                self.classifiers[i] = classifier
+                self.counter = i
+                if error < 0.000001:
+
+                    break
+
+                # predictions = classifier.predict(data)
+                missed = missed * 2 - 1
+                # predictions = predictions * 2 - 1
+                # sameOrNot = labels * predictions
+                # sameOrNot = (sameOrNot * 2 - 1).reshape(-1,1)
+                # print missed.shape,'sameshape'
+
+
+                # print sameOrNot
+                # print np.exp(-importance*labels*predictions).shape
+                # print weights.shape
+                # exit(0)
+                # print importance,'importance'
+                weights = weights * np.exp(-importance * missed)
+                weights = weights / np.sum(weights)
+                # print np.sum(weights),'sum weights'
+        # print self.importance[:self.counter+1]
+        # print self.classifiers[:self.counter+1]
 
 
 
 
-    def trainClassifiers(self):
+    def getBestClassifier(self,weights):
+        bestClassifier = None
+        bestAccuracy = None
+        bestPreds = None
+
         numClassifiers = self.numClassifiers
-        dataSets = self.dataSets
-        classifier = self.classifier
 
-        classifiers = [None]*numClassifiers
+        dataSets = self.createSubsets(self.data,weights)
 
         for i in xrange(numClassifiers):
-            clf = copy(classifier)
-            clf = train(clf, dataSets[i])
-            classifiers[i] = clf
+            tempClassifier = self.classifier
 
-        self.classifiers = classifiers
+            dataSet =  dataSets[i]
 
-    def train(self, classifier, data):
+            # print dataSet[i].shape, self.data.shape
 
-        
+            tempClassifier.fit(dataSet[:,:-1],dataSet[:,-1])
+
+            preds = tempClassifier.predict(self.data[:,:-1])
+
+            tempAcc = np.sum(preds == self.data[:,-1])/ float(self.data.shape[0])
+
+            # print tempAcc
+
+            if bestAccuracy is None or tempAcc > bestAccuracy:
+                bestAccuracy = tempAcc
+                bestClassifier = tempClassifier
+                bestPreds = preds
+
+        # print weights.shape,bestPreds.shape,self.data[:,-1].shape
+        missed = (bestPreds != self.data[:,-1]).reshape(-1,1)
+        # missed = missed * 2 - 1
+
+        error = np.dot(weights.T,missed) / np.sum(weights)
+        # print error,'error'
+
+        importance = 0.5 * np.log((1-error)/error)
+
+        return bestClassifier,error,importance,missed
 
 
-        for i in xrange(numIters):
+
+    def getMostCount(self,data1):
+        # print 'data = ',data1
+        label = np.sign(np.sum(data1))
+
+        if label < 0:
+            label = 0
 
 
-    def getMostCount(self,data):
-        # print 'data = ',data
-        # print data
-        unique, counts = np.unique(data, return_counts=True)
-        # print unique,counts
-        count = zip(unique, counts)
-        count = sorted(count, key = lambda x: x[1], reverse=True)
-        # print count
-        return count[0][0]
+        return label
 
     def predict(self, data):
-        # print self.classifiers
-        labelArr = [i.predict(data) for i in self.classifiers]
-        # print labelArr
-        labelArr = np.concatenate(list(zip(*labelArr))).reshape(-1,self.numClassifiers)
-        # print labelArr.shape
-        labels = np.apply_along_axis(self.getMostCount, 1, labelArr)
+        labelArr = [self.importance[i] * (self.classifiers[i].predict(data) * 2 -1) for i in xrange(self.counter+1)]
+
+        labels = np.apply_along_axis(self.getMostCount, 0, labelArr).reshape(-1,1)
+        # print labels.shape
+        # print labels
         return labels
 
 
@@ -90,12 +161,13 @@ def main(argv):
     parser = argparse.ArgumentParser(description='Random Forest Classifier')
 
     # optional arguments
-    parser.add_argument('-d', '--maxDepth', help='Maximum Depth of Decision Tree', type=int, default=10)
+    parser.add_argument('-d', '--maxDepth', help='Maximum Depth of Decision Tree', type=int, default=10000)
     parser.add_argument('-r', '--minRows', help='Minimum Rows required to split', type=int, default=1)
-    # parser.add_argument('-n', '--numClassifiers', help='Number of Classifiers', type=int, default=100)
+    parser.add_argument('-n', '--numClassifiers', help='Number of Classifiers', type=int, default=10)
     parser.add_argument('-x', '--ratio', help='Ratio of data for bagging', type=float, default=1-1/np.e)
-    parser.add_argument('-r', '--numIters', help='Number of iterations', type=float, default=50)
+    parser.add_argument('-m', '--numIters', help='Number of iterations', type=int, default=50)
     parser.add_argument('-f', '--numFeatures', help='Ratio of number of features for decision tree', type=float, default=0.2)
+    parser.add_argument('-l', '--learningRate', help='Ratio of number of features for decision tree', type=float, default=1.0)
     # parser.add_argument('-o', '--output', help='Output file to store PCA visualization')
 
     # required arguments
@@ -108,33 +180,40 @@ def main(argv):
     inputFile = args.input
     maxDepth = args.maxDepth
     minRows = args.minRows
-    # numClassifiers = args.numClassifiers
+    numClassifiers = args.numClassifiers
     ratio = args.ratio
     numFeatures = args.numFeatures
     numIters = args.numIters
+    learningRate = args.learningRate
 
     # print maxDepth,minRows
 
 
     # load initial data
-    data,labels = loadData(inputFile)
+    data,labels,mappings = loadData(inputFile)
 
     # data = np.array([[2,3,1],[4,5,0],[6,7,1],[8,9,0],[10,11,1]])
     # print data.shape
     # print labels.shape
     classifier = DecisionTree(maxDepth, minRows, numFeatures)
 
-    tree = BoostedClassifier(classifier,numIters,ratio)
-    tree.fit(data,labels)
+    tree = BoostedClassifier(classifier,numClassifiers,numIters,ratio,learningRate)
+    # tree.fit(data,labels)
     # exit(0)
-    predicted =  tree.predict(data)
+    # predicted =  tree.predict(data)
     # exit(0)
-    # print np.sum(predicted == labels)/ float(labels.shape[0])
+    # print np.sum(predicted == labels.reshape(-1,1))/ float(labels.shape[0])
     # exit(0)
-    print KFoldCrossValidation(tree,data,labels,k=10)
+    accuracy,precision,recall,f1_score = KFoldCrossValidation(tree,data,labels,k=10)
+    print '='*40 + 'Average' + '='*33
+    print 'Accuracy:\t',accuracy
+    print 'Precision:\t',precision
+    print 'Recall:\t',recall
+    print 'F1-Score:\t',f1_score
+    print '='*80
 
-    clf = RandomForestClassifier(max_depth=maxDepth, n_estimators=numClassifiers, bootstrap=True)
-    print np.mean(cross_val_score(clf, data, labels, cv=10))
+    # clf = RandomForestClassifier(max_depth=maxDepth, n_estimators=numClassifiers, bootstrap=True)
+    # print np.mean(cross_val_score(clf, data, labels, cv=10))
 
 
 

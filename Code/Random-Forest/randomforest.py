@@ -129,7 +129,13 @@ def main(argv):
     # exit(0)
     # print np.sum(predicted == labels)/ float(labels.shape[0])
     # exit(0)
-    print KFoldCrossValidation(tree,data,labels,k=10)
+    accuracy,precision,recall,f1_score = KFoldCrossValidation(tree,data,labels,k=10)
+    print '='*40 + 'Average' + '='*33
+    print 'Accuracy:\t',accuracy
+    print 'Precision:\t',precision
+    print 'Recall:\t',recall
+    print 'F1-Score:\t',f1_score
+    print '='*80
 
     clf = RandomForestClassifier(max_depth=maxDepth, n_estimators=numTrees, bootstrap=True)
     print np.mean(cross_val_score(clf, data, labels, cv=10))

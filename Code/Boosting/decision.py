@@ -1,5 +1,6 @@
 import numpy as np
 from pandas import DataFrame
+import pandas as pd
 # from sklearn.metrics.pairwise import euclidean_distances
 import os
 import sys
@@ -8,8 +9,9 @@ import copy
 import argparse
 import simplejson
 import copy
-# from sklearn.model_selection import cross_val_score
-# from sklearn.tree import DecisionTreeClassifier
+from sklearn.model_selection import cross_val_score
+from sklearn.tree import DecisionTreeClassifier
+from sklearn import tree
 
 def loadData(filePath):
     # function to load data from file
@@ -18,10 +20,10 @@ def loadData(filePath):
     if not os.path.exists(filePath):
         return None
 
+    mappings = {}
+
     # load data from the file
     df = DataFrame.from_csv(filePath, sep='\s+', header=None, index_col=None)
-    # print df
-    # print df
 
     obj_cols = df.select_dtypes(include=['object']).columns.values.tolist()
     # print obj_cols
@@ -31,12 +33,18 @@ def loadData(filePath):
 
     for col in obj_cols:
         # print df[col].cat_column.dtype == 'category'
-        df[col] = df[col].astype('category')
+        # df[col] = df[col].astype('category')
+        # df[col] = pd.Categorical(df[col])
+        # print pd.factorize(df[col])[1]
+        coded, index = pd.factorize(df[col])
+        index = index.tolist()
+        df[col] = coded
+        mappings[col] = index
     # exit(0)
 
-    obj_cols = df.select_dtypes(['category']).columns
+    # obj_cols = df.select_dtypes(['category']).columns
 
-    df[obj_cols] = df[obj_cols].apply(lambda x: x.cat.codes)
+    # df[obj_cols] = df[obj_cols].apply(lambda x: x.cat.codes)
 
     data = df.values
 
@@ -45,7 +53,11 @@ def loadData(filePath):
     labels = data[:,-1]
     data = data[:,:-1]
 
-    return (data,labels)
+    # print mappings
+
+    # exit(0)
+
+    return (data,labels, mappings)
 
 
 class DecisionTree(object):
@@ -56,14 +68,16 @@ class DecisionTree(object):
         self.numFeatures = numFeatures
         self.root = None
 
-    def fit(self, data, labels):
+    def fit(self, data, labels, mappings = {}):
         self.data = data
         self.labels = labels
+        self.mappings = mappings
         self.data = np.hstack((data,labels.reshape(-1,1)))
         # print self.data.shape
         self.root = self.createTree(self.data)
 
         # print simplejson.dumps(self.root)
+        # exit(0)
 
     def getGini(self, data, classes):
         gini = 1
@@ -93,10 +107,14 @@ class DecisionTree(object):
                 left = data[data[:, index] < value]
                 right = data[data[:, index] >= value]
                 
-                if left.shape[0] == 0 or right.shape[0] == 0:
-                    continue
-                giniLeft = self.getGini(left, set(left[:,-1].reshape(1,-1).tolist()[0]))
-                giniRight = self.getGini(right, set(right[:,-1].reshape(1,-1).tolist()[0]))
+                if left.shape[0] == 0:
+                    giniLeft = 0
+                else:
+                    giniLeft = self.getGini(left, set(left[:,-1].reshape(1,-1).tolist()[0]))
+                if right.shape[0] == 0:
+                    giniRight = 0
+                else:
+                    giniRight = self.getGini(right, set(right[:,-1].reshape(1,-1).tolist()[0]))
 
                 # print left.shape,giniLeft
                 # print right.shape, giniRight
@@ -105,7 +123,7 @@ class DecisionTree(object):
 
                 # print infoGain,gini,giniLeft,left.shape[0],giniRight,right.shape[0]
 
-                if gain is None or infoGain > gain and left is not None and right is not None:
+                if gain is None or infoGain > gain:
                     selIndex = index
                     selValue = value
                     gain = infoGain
@@ -123,7 +141,6 @@ class DecisionTree(object):
     def createTree(self, data, depth=0):
         # print data.shape,depth,self.minRows,self.maxDepth
         gini = self.getGini(data,set(data[:,-1].reshape(1,-1).tolist()[0]))
-        # print gini
         root = {'data':data.tolist(), 'gini':gini, 'dataCount': data.shape[0]}
         if gini == 0 or data.shape[0] < self.minRows or depth >= self.maxDepth:
             root['type'] = 'terminal'
@@ -141,9 +158,11 @@ class DecisionTree(object):
         else:
             root['type'] = 'split'
             index, value, gain, left, right = self.getSplit(data, gini)
-            if left is not None and right is not None:
+            if left is not None and right is not None and left.shape[0] != 0 and right.shape[0] != 0:
                 root['index'] = index
                 root['value'] = value
+                if index in self.mappings:
+                    root['actualValue'] = self.mappings[index][value]
                 root['left'] = self.createTree(left,depth+1)
                 root['right'] = self.createTree(right,depth+1)
                 root['gain'] = gain
@@ -185,6 +204,10 @@ def KFoldCrossValidation(classifier, data, labels, k=1):
     chunks = np.array_split(data, k)
 
     predicted = np.zeros((len(chunks),1))
+    accuracy = np.zeros((len(chunks),1))
+    precision = np.zeros((len(chunks),1))
+    recall = np.zeros((len(chunks),1))
+    f1_score = np.zeros((len(chunks),1))
 
     for i in xrange(k):
         temp = copy.copy(chunks)
@@ -194,10 +217,37 @@ def KFoldCrossValidation(classifier, data, labels, k=1):
         # print train.shape,test.shape
         classifier.fit(train[:,:-1],train[:,-1])
         pred = classifier.predict(test[:,:-1])
-        predicted[i] = np.sum(pred == test[:,-1])/ float(pred.shape[0])
+        # print pred.shape,test[:,-1].shape
+        predicted[i] = np.sum(pred == test[:,-1].reshape(-1,1))/ float(pred.shape[0])
         # print predicted[i]
 
-    return np.mean(predicted)
+        true_positive = 0
+        true_negative = 0
+        false_positive = 0
+        false_negative = 0
+
+        for j in xrange(pred.shape[0]):
+            if pred[j][0] == test[j][-1] and pred[j][0] == 1:
+                true_positive += 1
+            elif pred[j][0] == test[j][-1] and pred[j][0] == 0:
+                true_negative += 1
+            elif pred[j][0] == 1:
+                false_positive += 1
+            else:
+                false_negative += 1
+
+        accuracy[i] = (true_negative + true_positive) / float(pred.shape[0])
+        precision[i] = true_positive / float(true_positive + false_positive)
+        recall[i] = true_positive / float(true_positive + false_negative)
+        f1_score[i] = (2*precision[i]*recall[i]) / (precision[i] + recall[i])
+        print '*'*80
+        print 'Accuracy:\t',accuracy[i]
+        print 'Precision:\t',precision[i]
+        print 'Recall:\t',recall[i]
+        print 'F1-Score:\t',f1_score[i]
+        print '*'*80
+
+    return np.mean(accuracy),np.mean(precision),np.mean(recall),np.mean(f1_score)
 
 
 def main(argv):
@@ -224,20 +274,22 @@ def main(argv):
 
 
     # load initial data
-    data,labels = loadData(inputFile)
+    data,labels, mappings = loadData(inputFile)
 
     # data = np.array([[2,3,1],[4,5,0],[6,7,1],[8,9,0],[10,11,1]])
     # print data.shape
     # print labels.shape
 
     tree = DecisionTree(maxDepth,minRows,numFeatures=1)
-    tree.fit(data,labels)
+    tree.fit(data,labels, mappings)
     predicted =  tree.predict(data)
-    # print np.sum(predicted == labels)/ float(labels.shape[0])
+    print np.sum(predicted == labels)/ float(labels.shape[0])
     # exit(0)
-    print KFoldCrossValidation(tree,data,labels,k=10)
+    # print KFoldCrossValidation(tree,data,labels,k=10)
 
     # clf = DecisionTreeClassifier(max_depth=maxDepth)
+    # clf.fit(data, labels)
+    # tree.export_graphviz(clf, out_file='tree.dot')      
     # print np.mean(cross_val_score(clf, data, labels, cv=10))
 
 

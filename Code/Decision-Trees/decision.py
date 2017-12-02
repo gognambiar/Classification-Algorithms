@@ -9,8 +9,9 @@ import copy
 import argparse
 import simplejson
 import copy
-# from sklearn.model_selection import cross_val_score
-# from sklearn.tree import DecisionTreeClassifier
+from sklearn.model_selection import cross_val_score
+from sklearn.tree import DecisionTreeClassifier
+from sklearn import tree
 
 def loadData(filePath):
     # function to load data from file
@@ -52,7 +53,7 @@ def loadData(filePath):
     labels = data[:,-1]
     data = data[:,:-1]
 
-    print mappings
+    # print mappings
 
     # exit(0)
 
@@ -202,7 +203,10 @@ def KFoldCrossValidation(classifier, data, labels, k=1):
 
     chunks = np.array_split(data, k)
 
-    predicted = np.zeros((len(chunks),1))
+    accuracy = np.zeros((len(chunks),1))
+    precision = np.zeros((len(chunks),1))
+    recall = np.zeros((len(chunks),1))
+    f1_score = np.zeros((len(chunks),1))
 
     for i in xrange(k):
         temp = copy.copy(chunks)
@@ -212,10 +216,37 @@ def KFoldCrossValidation(classifier, data, labels, k=1):
         # print train.shape,test.shape
         classifier.fit(train[:,:-1],train[:,-1])
         pred = classifier.predict(test[:,:-1])
-        predicted[i] = np.sum(pred == test[:,-1])/ float(pred.shape[0])
-        print predicted[i]
+        # print pred.shape,test[:,:-1].shape
+        # predicted[i] = np.sum(pred == test[:,-1])/ float(pred.shape[0])
 
-    return np.mean(predicted)
+        true_positive = 0
+        true_negative = 0
+        false_positive = 0
+        false_negative = 0
+
+        for j in xrange(pred.shape[0]):
+            if pred[j] == test[j][-1] and pred[j] == 1:
+                true_positive += 1
+            elif pred[j] == test[j][-1] and pred[j] == 0:
+                true_negative += 1
+            elif pred[j] == 1:
+                false_positive += 1
+            else:
+                false_negative += 1
+
+        accuracy[i] = (true_negative + true_positive) / float(pred.shape[0])
+        precision[i] = true_positive / float(true_positive + false_positive)
+        recall[i] = true_positive / float(true_positive + false_negative)
+        f1_score[i] = (2*precision[i]*recall[i]) / (precision[i] + recall[i])
+        print '*'*80
+        print 'Accuracy:\t',accuracy[i]
+        print 'Precision:\t',precision[i]
+        print 'Recall:\t',recall[i]
+        print 'F1-Score:\t',f1_score[i]
+        print '*'*80
+
+
+    return np.mean(accuracy),np.mean(precision),np.mean(recall),np.mean(f1_score)
 
 
 def main(argv):
@@ -249,13 +280,15 @@ def main(argv):
     # print labels.shape
 
     tree = DecisionTree(maxDepth,minRows,numFeatures=1)
-    tree.fit(data,labels, mappings)
-    predicted =  tree.predict(data)
+    # tree.fit(data,labels, mappings)
+    # predicted =  tree.predict(data)
     # print np.sum(predicted == labels)/ float(labels.shape[0])
     # exit(0)
     print KFoldCrossValidation(tree,data,labels,k=10)
 
     # clf = DecisionTreeClassifier(max_depth=maxDepth)
+    # clf.fit(data, labels)
+    # tree.export_graphviz(clf, out_file='tree.dot')      
     # print np.mean(cross_val_score(clf, data, labels, cv=10))
 
 
