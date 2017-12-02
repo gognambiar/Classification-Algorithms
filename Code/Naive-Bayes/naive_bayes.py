@@ -13,7 +13,7 @@ def gaussian_prob(mean_val,var_val,x_val):
 def categ_prob(x_val,i,dct):
 	return dct[i][x_val]
 
-
+#Load data from file name provided
 def loadData(filePath):
 	# if file doesnt exist then return None
 	if not os.path.exists(filePath):
@@ -23,6 +23,7 @@ def loadData(filePath):
 	df = pd.DataFrame.from_csv(filePath, sep='\s+', header=None, index_col=None)
 	# print df
 
+	#Record columns which have categorical data
 	obj_cols = df.select_dtypes(include=['object']).columns.values.tolist()
 
 	data = df.values
@@ -30,7 +31,7 @@ def loadData(filePath):
 	return (data,obj_cols)
 
 
-
+#Calculate class descriptor probability
 def calc_naive_bayes(train_data,test_data,test_labels,obj_cols,print_opt):
 	data_yes = np.asarray([train_data[i] for i in range(len(train_data)) if train_data[i][-1] == 1])[:,:-1]
 	data_no = np.asarray([train_data[i] for i in range(len(train_data)) if train_data[i][-1] == 0])[:,:-1]
@@ -40,6 +41,7 @@ def calc_naive_bayes(train_data,test_data,test_labels,obj_cols,print_opt):
 	dct_yes,dct_no,dct_pri = {},{},{}
 	full_data = pd.DataFrame(train_data)
 	
+	#Handle categorical data
 	if(len(obj_cols) > 0):
 		for k in obj_cols:
 			cat_prob_yes,cat_prob_no,cat_prob_pri = {},{},{}
@@ -62,7 +64,7 @@ def calc_naive_bayes(train_data,test_data,test_labels,obj_cols,print_opt):
 			dct_no[k] = cat_prob_no
 			dct_pri[k] = cat_prob_pri
 	
-	
+	#Handle continous data
 	for i in range(data_yes.shape[1]):
 		if(i not in obj_cols):
 			gaus_yes.append((data_yes[i].mean(axis = 0),data_yes[i].var(axis = 0)))
@@ -83,10 +85,12 @@ def calc_naive_bayes(train_data,test_data,test_labels,obj_cols,print_opt):
 	for i in range(test_data.shape[0]):
 		prob_yes,prob_no = 1,1
 		for j in range(len(test_data[i])):
+			#Calculate probability for categorical values
 			if(j in obj_cols):
 				prob_class = categ_prob(test_data[i][j],j,dct_pri)
 				prob_yes *= categ_prob(test_data[i][j],j,dct_yes)/prob_class
 				prob_no *= categ_prob(test_data[i][j],j,dct_no)/prob_class
+			#Calculate probability for continous values
 			else:
 				prob_class = gaussian_prob(gaus_full[j][0],gaus_full[j][1],test_data[i][j])
 				prob_yes *= gaussian_prob(gaus_yes[j][0],gaus_yes[j][1],test_data[i][j])/prob_class
@@ -95,6 +99,7 @@ def calc_naive_bayes(train_data,test_data,test_labels,obj_cols,print_opt):
 
 		fin_prob_yes = prob_yes*(data_yes.shape[0]/(data_yes.shape[0]+data_no.shape[0]))
 		fin_prob_no = prob_no*(data_no.shape[0]/(data_yes.shape[0]+data_no.shape[0]))
+		#Print Probabilities for both labels
 		if(print_opt == 1):
 			print("Probability of 1 is "+str(fin_prob_yes))
 			print("Probability of 0 is "+str(fin_prob_no))
@@ -119,11 +124,9 @@ def calc_naive_bayes(train_data,test_data,test_labels,obj_cols,print_opt):
 		else:
 			d += 1
 	
-	#accuracy,precision,recall,fmeasure = (a+d)/(a+b+c+d),(a)/(a+c),(a)/(a+b),(2*a)/(2*a+b+c)
-	if(a == 0):
-		accuracy,precision,recall,fmeasure = (d)/(b+c+d),0,0,0
-	else:    
-		accuracy,precision,recall,fmeasure = (a+d)/(a+b+c+d),(a)/(a+c),(a)/(a+b),(2*a)/(2*a+b+c)
+	
+	#Calculate the accuracy, precision,recall and fmeasure
+	accuracy,precision,recall,fmeasure = (a+d)/(a+b+c+d),(a)/(a+c),(a)/(a+b),(2*a)/(2*a+b+c)
 	
 	return accuracy,precision,recall,fmeasure
 
@@ -135,11 +138,13 @@ def main():
 	requiredNamed.add_argument('-p', '--tes', help='Testing data set file name', type=str)
 	args = parser.parse_args()
 
+	#Handle the condition where both train and test data set are given seperately
 	if(args.tra and args.tes):
 		train_data,obj_cols = loadData(args.tra)
 		test_data,obj_cols = loadData(args.tes)
 		calc_naive_bayes(train_data,test_data,[],obj_cols,1)
 
+	#Handle the condition where single dataset is given
 	else:
 		file_name = args.input
 		data,obj_cols = loadData(file_name)
