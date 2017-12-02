@@ -21,3 +21,18 @@ Single data set is given -
 sample command - python naive_bayes.py -t project3_dataset4.txt -p project3_dataset4_test.txt
 prints the class posterior probability of all the labels
 
+Formats
+	
+	-t : 	string : 	Training data set file name
+
+	-p : 	string :	Testing data set file name 
+  
+  -i :  string : Input data file name for single file format for 10-fold cross validation
+
+Required Libraries:
+import pandas as pd
+import operator
+import os, sys, copy
+import numpy as np
+import math
+import argparse
