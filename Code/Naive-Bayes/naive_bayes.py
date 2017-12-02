@@ -13,27 +13,6 @@ def gaussian_prob(mean_val,var_val,x_val):
 def categ_prob(x_val,i,dct):
 	return dct[i][x_val]
 
-def load_sep(train_file,test_file):
-	if not (os.path.exists(train_file) or os.path.exists(test_file)):
-		return None
-
-	df1 = pd.DataFrame.from_csv(train_file, sep='\s+', header=None, index_col=None)
-	df2 = pd.DataFrame.from_csv(test_file, sep='\s+', header=None, index_col=None)
-	df = pd.concat([df1,df2])
-
-	obj_cols = df.select_dtypes(include=['object']).columns.values.tolist()
-
-	for col in obj_cols:
-		df[col] = df[col].astype('category')
-
-	obj_cols = df.select_dtypes(['category']).columns
-
-	df[obj_cols] = df[obj_cols].apply(lambda x: x.cat.codes)
-
-	train_data = df[:][:df1.shape[0]].values
-	test_data = df[:][df1.shape[0]:].values
-
-	return train_data,test_data,obj_cols
 
 def loadData(filePath):
 	# if file doesnt exist then return None
@@ -136,7 +115,7 @@ def calc_naive_bayes(train_data,test_data,test_labels,obj_cols,print_opt):
 		elif(test_labels[i] == 1 and res[i] == 0):
 			b += 1
 		elif(test_labels[i] == 0 and res[i] == 1):
-			c += 1
+			c += 1	
 		else:
 			d += 1
 	
