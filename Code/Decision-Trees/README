@@ -22,6 +22,9 @@ Formats
 
 	-i : 	string :	path of the the input file 
 
+This program outputs the average accuracy, precision, recall and f1 score of a 10-fold cross validation.
+As well as accruacy, precision, recall and f1 score for each round.
+
 Required Libraries:
 
 	import numpy as np
@@ -34,3 +37,8 @@ Required Libraries:
 	import argparse
 	import simplejson
 	import copy
+
+Example:
+	python2.7 decision.py -i ../../Data/project3_dataset4.txt
+
+	python2.7 decision.py -i ../../Data/project3_dataset4.txt -r 3 -d 10

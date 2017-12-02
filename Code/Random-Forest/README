@@ -48,3 +48,9 @@ Required Libraries:
     from pandas import DataFrame
     import copy
     import simplejson
+
+Examples:
+    python2.7 randomforest.py -i ../../Data/project3_dataset2.txt -r 3 -d 10 -n 7 
+    python2.7 randomforest.py -i ../../Data/project3_dataset2.txt -r 3 -d 10 -n 7 -x 0.7
+    python2.7 randomforest.py -i ../../Data/project3_dataset2.txt -r 3 -d 10 -n 7 -x 0.7 -f 0.3
+

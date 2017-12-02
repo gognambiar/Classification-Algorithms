@@ -4,8 +4,6 @@ import argparse
 import os
 import sys
 import numpy as np
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import cross_val_score
 
 class RandomForest(object):
     def __init__(self, numTrees=100, maxDepth=10, minRows=1, ratio=0.632, numFeatures=0.2):
@@ -16,45 +14,47 @@ class RandomForest(object):
         self.numFeatures = numFeatures
 
     def createSubsets(self, data):
+        # function to create N training datasets by sampling with replacement
         length = data.shape[0]
         ratio = self.ratio
 
+        # initialize datasets as None
         dataSets = [None]*self.numTrees
 
+        # get number of rows to keep from the dataset
         originalDataLength = int(length*ratio)
 
+        # create rest of the rows by duplicating from the originalDataLength
         for i in xrange(self.numTrees):
             randomIndices = np.random.choice(length, originalDataLength, replace=False)
             dataSets[i] = data[randomIndices]
             randomDuplicating = np.random.choice(dataSets[i].shape[0], length - originalDataLength, replace=True)
-            # print dataSets[i].shape
             dups = dataSets[i][randomDuplicating]
-            # print dups.shape
             dataSets[i] = np.vstack((dataSets[i], dups))
-            # print dataSets[i].shape[0]
-
 
         return dataSets
 
     def fit(self, data, labels, mappings = {}):
-        # self.data = data
-        # self.labels = labels
-        self.mappings = mappings
-        self.data = np.hstack((data,labels.reshape(-1,1)))
-        # print self.data.shape
-        self.dataSets = self.createSubsets(self.data)
-        # print len(self.dataSets)
 
-        # print [i.shape for i in self.dataSets]
+        self.mappings = mappings
+
+        # combine data and labels
+        self.data = np.hstack((data,labels.reshape(-1,1)))
+
+        # create subsets
+        self.dataSets = self.createSubsets(self.data)
+
         self.createForest()
 
     def createForest(self):
+        # function to create N decision trees using the subset datasets
         numTrees = self.numTrees
         dataSets = self.dataSets
         maxDepth = self.maxDepth
         minRows = self.minRows
         numFeatures = self.numFeatures
 
+        # store root of trees for predicition
         roots = [None]*numTrees
 
         for i in xrange(numTrees):
@@ -65,22 +65,24 @@ class RandomForest(object):
         self.roots = roots
 
     def getMostCount(self,data):
-        # print 'data = ',data
-        # print data
+        # function to get label from the trees by majority voting
         unique, counts = np.unique(data, return_counts=True)
-        # print unique,counts
         count = zip(unique, counts)
         count = sorted(count, key = lambda x: x[1], reverse=True)
-        # print count
         return count[0][0]
 
     def predict(self, data):
-        # print self.roots
+        # function to predict label for data matrix 
+
+        # get predictions
         labelArr = [i.predict(data) for i in self.roots]
-        # print labelArr
+
+        # convert matrix so labels for a data point by N trees are in one row
         labelArr = np.concatenate(list(zip(*labelArr))).reshape(-1,self.numTrees)
-        # print labelArr.shape
+
+        # get majority vote for label for matrix
         labels = np.apply_along_axis(self.getMostCount, 1, labelArr)
+
         return labels
 
 
@@ -91,9 +93,9 @@ def main(argv):
     parser = argparse.ArgumentParser(description='Random Forest Classifier')
 
     # optional arguments
-    parser.add_argument('-d', '--maxDepth', help='Maximum Depth of Decision Tree', type=int, default=10)
+    parser.add_argument('-d', '--maxDepth', help='Maximum Depth of Decision Tree', type=int, default=10000)
     parser.add_argument('-r', '--minRows', help='Minimum Rows required to split', type=int, default=1)
-    parser.add_argument('-n', '--numTrees', help='Number of Decision Trees in Forest', type=int, default=100)
+    parser.add_argument('-n', '--numTrees', help='Number of Decision Trees in Forest', type=int, default=7)
     parser.add_argument('-x', '--ratio', help='Ratio of data for bagging', type=float, default=1-1/np.e)
     parser.add_argument('-f', '--numFeatures', help='Ratio of number of features for decision tree', type=float, default=0.2)
     # parser.add_argument('-o', '--output', help='Output file to store PCA visualization')
@@ -118,17 +120,13 @@ def main(argv):
     # load initial data
     data,labels, mappings = loadData(inputFile)
 
-    # data = np.array([[2,3,1],[4,5,0],[6,7,1],[8,9,0],[10,11,1]])
-    # print data.shape
-    # print labels.shape
+
 
     tree = RandomForest(numTrees,maxDepth,minRows,ratio,numFeatures)
-    tree.fit(data,labels, mappings)
-    # exit(0)
-    predicted =  tree.predict(data)
-    # exit(0)
+    # tree.fit(data,labels, mappings)
+    # predicted =  tree.predict(data)
     # print np.sum(predicted == labels)/ float(labels.shape[0])
-    # exit(0)
+    
     accuracy,precision,recall,f1_score = KFoldCrossValidation(tree,data,labels,k=10)
     print '='*40 + 'Average' + '='*33
     print 'Accuracy:\t',accuracy
@@ -137,8 +135,6 @@ def main(argv):
     print 'F1-Score:\t',f1_score
     print '='*80
 
-    clf = RandomForestClassifier(max_depth=maxDepth, n_estimators=numTrees, bootstrap=True)
-    print np.mean(cross_val_score(clf, data, labels, cv=10))
 
 
 

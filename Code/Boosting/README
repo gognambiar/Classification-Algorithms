@@ -57,3 +57,10 @@ Required Libraries:
     import simplejson
     import pandas as pd
     from pandas import DataFrame
+
+Example:
+    python2.7 boosting.py -i ../../Data/project3_dataset1.txt
+    python2.7 boosting.py -i ../../Data/project3_dataset2.txt -r 3 -d 10 -n 7 
+    python2.7 boosting.py -i ../../Data/project3_dataset2.txt -r 3 -d 10 -n 7 -x 0.7
+    python2.7 boosting.py -i ../../Data/project3_dataset2.txt -r 3 -d 10 -n 7 -f 0.3
+    python2.7 boosting.py -i ../../Data/project3_dataset2.txt -r 3 -d 10 -n 7 -x 0.7 -f 0.3 -m 15
