@@ -2,6 +2,7 @@ import numpy as np
 import os, sys, copy
 import math
 from pandas import DataFrame
+from pandas import factorize
 import argparse
 from sklearn import preprocessing
 
@@ -19,24 +20,27 @@ def euclidean_dist(a,b,obj_cols):
 
 
 def loadData(filePath):
+	# function to load data from file
+
 	# if file doesnt exist then return None
 	if not os.path.exists(filePath):
 		return None
 
+	mappings = {}
+
 	# load data from the file
 	df = DataFrame.from_csv(filePath, sep='\s+', header=None, index_col=None)
-	# print df
 
 	obj_cols = df.select_dtypes(include=['object']).columns.values.tolist()
 
 	for col in obj_cols:
-		df[col] = df[col].astype('category')
-
-	obj_cols = df.select_dtypes(['category']).columns
-
-	df[obj_cols] = df[obj_cols].apply(lambda x: x.cat.codes)
+		coded, index = factorize(df[col])
+		index = index.tolist()
+		df[col] = coded
+		mappings[col] = index
 
 	data = df.values
+	print(df)
 
 	return (data[:,:-1],data[:,-1],obj_cols)
 
