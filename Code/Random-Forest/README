@@ -1,0 +1,50 @@
+usage: randomforest.py [-h] [-d MAXDEPTH] [-r MINROWS] [-n NUMTREES]
+                       [-x RATIO] [-f NUMFEATURES] -i INPUT
+
+Random Forest Classifier
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -d MAXDEPTH, --maxDepth MAXDEPTH
+                        Maximum Depth of Decision Tree
+  -r MINROWS, --minRows MINROWS
+                        Minimum Rows required to split
+  -n NUMTREES, --numTrees NUMTREES
+                        Number of Decision Trees in Forest
+  -x RATIO, --ratio RATIO
+                        Ratio of data for bagging
+  -f NUMFEATURES, --numFeatures NUMFEATURES
+                        Ratio of number of features for decision tree
+
+Required named arguments:
+  -i INPUT, --input INPUT
+                        Input data file name
+
+
+Argument Formats:
+  
+    -d :    int :       Maximum Depth for Decision Trees
+
+    -r :    int :       Minimum Number of samples to split node in a decision tree
+
+    -n :    int :       Number of decision trees in forest
+
+    -x :    float :     Ratio of data to sample with replacement
+
+    -f :    float :     Ratio of features to be considered at each split node of decision tree
+
+    -i :    string :    Path of the input file name
+
+This program outputs the average accuracy, precision, recall and f1 score of a 10-fold cross validation.
+As well as accruacy, precision, recall and f1 score for each round. 
+
+Required Libraries:
+    import getopt
+    import argparse
+    import os
+    import sys
+    import numpy as np
+    import pandas as pd
+    from pandas import DataFrame
+    import copy
+    import simplejson

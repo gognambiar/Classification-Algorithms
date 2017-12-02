@@ -1,0 +1,36 @@
+usage: decision.py [-h] [-d MAXDEPTH] [-r MINROWS] -i INPUT
+
+Decision Tree Classifier
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -d MAXDEPTH, --maxDepth MAXDEPTH
+                        Maximum Depth of Decision Tree
+  -r MINROWS, --minRows MINROWS
+                        Minimum Rows required to split
+
+Required named arguments:
+  -i INPUT, --input INPUT
+                        Input data file name
+
+
+Formats
+
+	-d : 	int : 		maximum depth of the decision tree
+	
+	-r : 	int : 		minimum number of rows to perform splitting
+
+	-i : 	string :	path of the the input file 
+
+Required Libraries:
+
+	import numpy as np
+	from pandas import DataFrame
+	import pandas as pd
+	import os
+	import sys
+	import getopt
+	import copy
+	import argparse
+	import simplejson
+	import copy

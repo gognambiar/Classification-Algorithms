@@ -158,16 +158,16 @@ class BoostedClassifier(object):
 
 def main(argv):
     # arguments
-    parser = argparse.ArgumentParser(description='Random Forest Classifier')
+    parser = argparse.ArgumentParser(description='Boosting Decision Tree Classifier')
 
     # optional arguments
     parser.add_argument('-d', '--maxDepth', help='Maximum Depth of Decision Tree', type=int, default=10000)
     parser.add_argument('-r', '--minRows', help='Minimum Rows required to split', type=int, default=1)
-    parser.add_argument('-n', '--numClassifiers', help='Number of Classifiers', type=int, default=10)
+    parser.add_argument('-n', '--numClassifiers', help='Number of Classifiers', type=int, default=5)
     parser.add_argument('-x', '--ratio', help='Ratio of data for bagging', type=float, default=1-1/np.e)
-    parser.add_argument('-m', '--numIters', help='Number of iterations', type=int, default=50)
+    parser.add_argument('-m', '--numIters', help='Number of iterations', type=int, default=10)
     parser.add_argument('-f', '--numFeatures', help='Ratio of number of features for decision tree', type=float, default=0.2)
-    parser.add_argument('-l', '--learningRate', help='Ratio of number of features for decision tree', type=float, default=1.0)
+    parser.add_argument('-l', '--learningRate', help='Learning Rate for Boosting', type=float, default=1.0)
     # parser.add_argument('-o', '--output', help='Output file to store PCA visualization')
 
     # required arguments

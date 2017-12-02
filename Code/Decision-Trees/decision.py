@@ -53,7 +53,7 @@ def loadData(filePath):
     labels = data[:,-1]
     data = data[:,:-1]
 
-    # print mappings
+    print mappings,'\n\n'
 
     # exit(0)
 
@@ -76,7 +76,7 @@ class DecisionTree(object):
         # print self.data.shape
         self.root = self.createTree(self.data)
 
-        # print simplejson.dumps(self.root)
+        print simplejson.dumps(self.root)
         # exit(0)
 
     def getGini(self, data, classes):
@@ -254,7 +254,7 @@ def main(argv):
     parser = argparse.ArgumentParser(description='Decision Tree Classifier')
 
     # optional arguments
-    parser.add_argument('-d', '--maxDepth', help='Maximum Depth of Decision Tree', type=int, default=10)
+    parser.add_argument('-d', '--maxDepth', help='Maximum Depth of Decision Tree', type=int, default=100000)
     parser.add_argument('-r', '--minRows', help='Minimum Rows required to split', type=int, default=1)
     # parser.add_argument('-o', '--output', help='Output file to store PCA visualization')
 
@@ -280,11 +280,11 @@ def main(argv):
     # print labels.shape
 
     tree = DecisionTree(maxDepth,minRows,numFeatures=1)
-    # tree.fit(data,labels, mappings)
+    tree.fit(data,labels, mappings)
     # predicted =  tree.predict(data)
     # print np.sum(predicted == labels)/ float(labels.shape[0])
     # exit(0)
-    print KFoldCrossValidation(tree,data,labels,k=10)
+    # print KFoldCrossValidation(tree,data,labels,k=10)
 
     # clf = DecisionTreeClassifier(max_depth=maxDepth)
     # clf.fit(data, labels)
